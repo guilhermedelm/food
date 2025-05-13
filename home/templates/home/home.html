@@ -3,10 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>Mercados Locais</title>
-    <meta name="viewport" content=""width=device-width,initial-scale=1>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Leaflet CSS + JS -->
+    <!-- Leaflet CSS + JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    
 
 </head>
 <body class="bg-light">
@@ -24,17 +31,24 @@
                 <input type="text" name="longitude" class="form-control" required>
             </div>
             <div class="mb-3">
-                <label class="form-label">Distância máxima (km):</label>
+                <label class="form-label">Max Distance (km):</label>
                 <input type="number" name="max_distance" class="form-control" value="20" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Food Type:</label>
+                <input type="text" name="food_type" class="form-control" >
             </div>
             <button type="submit" class="btn btn-primary">Buscar</button>
         </form>
-    
+        
         {% if error %}
             <div class="alert alert-danger mt-4">{{ error }}</div>
         {% endif %}
     
         {% if markets %}
+            <div id="map" style="height: 500px; margin-top: 20px;"></div>
+            
+
             <h2 class="mt-5">Mercados próximos:</h2>
             <table class="table table-striped table-bordered mt-3">
                 <thead class="table-light">
@@ -42,6 +56,7 @@
                         <th>Nome</th>
                         <th>Endereço</th>
                         <th>Distância (km)</th>
+                        <th>Produtos</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -50,13 +65,46 @@
                         <td>{{ market.0 }}</td>
                         <td>{{ market.1 }}</td>
                         <td>{{ market.2|floatformat:2 }}</td>
+                        <td>{{ market.3}}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            <script>
+                //coordenadas do usuário
+                const userLat = parseFloat('{{ latitude|default:"0" }}')
+                const userLng = parseFloat('{{ longitude|default:"0" }}')
+                
+                //passar markets para json
+                const markets = JSON.parse(`{{ markets_json|escapejs }}`);
+                
+                //inicializa mapa no usuário                
+                const map = L.map('map').setView([userLat, userLng], 13);
+                
+                // Adiciona o mapa base do OpenStreetMap
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+
+                //Adiciona o marcador do local do usuário
+                L.marker([userLat,userLng]).addTo(map)
+                    .bindPopup('Sua Locacalização')
+                    .openPopup();
+
+                //Adiciona markets no mapa
+                for (const market of markets){
+                    const [name,address,distance,products,lat,lng] = market;
+                    L.marker([lat,lng]).addTo(map)
+                    .bindPopup(`<strong>${name}</strong><br>${address}<br><em>${products}</em><br>${distance.toFixed(2)} km`);
+                }
+
+            </script>
+
         {% endif %}
     </div>
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+
 </body>
 </html>
