@@ -24,11 +24,11 @@
             {% csrf_token %}
             <div class="mb-3">
                 <label class="form-label">Latitude:</label>
-                <input type="text" name="latitude" class="form-control" required>
+                <input type="hidden" name="latitude" class="form-control" required>
             </div>
             <div class="mb-3">
                 <label class="form-label">Longitude:</label>
-                <input type="text" name="longitude" class="form-control" required>
+                <input type="hidden" name="longitude" class="form-control" required>
             </div>
             <div class="mb-3">
                 <label class="form-label">Max Distance (km):</label>
@@ -38,7 +38,7 @@
                 <label class="form-label">Food Type:</label>
                 <input type="text" name="food_type" class="form-control" >
             </div>
-            <button type="submit" class="btn btn-primary">Buscar</button>
+            <button type="searchButton" class="btn btn-primary" onclick="getLocationAndSubmit()">Buscar</button>
         </form>
         
         {% if error %}
@@ -102,6 +102,64 @@
 
         {% endif %}
     </div>
+    <script>
+        function getLocationAndSubmit() {
+            const status = document.getElementById('status');
+            const latInput = document.getElementById('latitude');
+            const lonInput = document.getElementById('longitude');
+            const form = document.getElementById('locationForm');
+            const searchButton = document.getElementById('searchButton');
+
+            status.textContent = 'Obtendo sua localização...';
+            status.className = 'form-text text-info'; // Usando classes Bootstrap
+            searchButton.disabled = true; // Desabilita o botão
+
+            if (!navigator.geolocation) {
+                const msg = 'Geolocalização não é suportada pelo seu navegador.';
+                status.textContent = msg;
+                status.className = 'form-text text-danger';
+                alert(msg);
+                searchButton.disabled = false; // Habilita o botão de volta
+            } else {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+
+                        latInput.value = latitude;
+                        lonInput.value = longitude;
+
+                        status.textContent = `Localização obtida! Buscando mercados...`;
+                        status.className = 'form-text text-success';
+                        
+                        // Submete o formulário
+                        form.submit(); 
+                    },
+                    (error) => {
+                        let errorMessage = 'Não foi possível obter a localização. ';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage += "Você negou a permissão de Geolocalização.";
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage += "Informação de localização não está disponível.";
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage += "A solicitação para obter a localização expirou.";
+                                break;
+                            case error.UNKNOWN_ERROR:
+                                errorMessage += "Ocorreu um erro desconhecido.";
+                                break;
+                        }
+                        status.textContent = errorMessage;
+                        status.className = 'form-text text-danger';
+                        alert(errorMessage + " Verifique as permissões do seu navegador ou tente novamente.");
+                        searchButton.disabled = false; // Habilita o botão de volta
+                    }
+                );
+            }
+        }
+    </script>
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     

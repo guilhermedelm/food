@@ -4,6 +4,7 @@ from django.shortcuts import render
 import pandas as pd
 from geopy.distance import geodesic
 import json
+from datetime import datetime
 
 # Create your views here.
 EXCEL_PATH = os.path.join(settings.BASE_DIR, 'home', 'data', 'farmersmarket.xlsx')
@@ -48,6 +49,28 @@ def home(request):
                 lambda row: calculate_distance(row["location_x"], row["location_y"]),
                 axis=1
             )
+
+            def recomendation(planilha:pd.DataFrame,) -> pd.DataFrame:
+                mes=datetime.now().month
+                mes_comparado=f'month_{mes}'
+
+                #filtra por colunas com produção no mês atual
+                df_mes=planilha[planilha[mes_comparado] == 1].copy()
+
+                #cria coluna de pontuação
+                df_mes['score'] = 0
+                #sistema de pontuações
+                df_mes['score'] += df_mes['specialproductionmethods'].str.lower().str.contains("organic", na=False).astype(int)
+                df_mes['score'] += df_mes['specialproductionmethods'].str.lower().str.contains("no hormones", na=False).astype(int)
+
+                #ordena df_mes pela pontuação
+                df_mes=df_mes.sort_values(by='score', ascending = False)
+
+                return df_mes
+
+                
+
+
             df = df.dropna(subset=["distance_km"])
             if food_type == "" :
                 # Filtro por distância escolhida
@@ -56,6 +79,7 @@ def home(request):
                 context["markets"] = recommended_markets[
                     ["listing_name", "location_address", "distance_km","products","location_y","location_x"]
                 ].head(10).values.tolist()
+                recomendation(recommended_markets)
             
             else:
                 food_type = food_type.lower()
@@ -65,6 +89,7 @@ def home(request):
                 recommended_markets = recommended_markets.where(pd.notnull(recommended_markets), None)
                 context["markets"] = recommended_markets[["listing_name", "location_address", "distance_km","products","location_y","location_x"]].head(10).values.tolist()
                 print(context)
+                context["recommended"]=recomendation(recommended_markets)[[]]
 
                 
                 
@@ -79,6 +104,8 @@ def home(request):
     if "markets" in context:
         context["markets_json"] = json.dumps(context["markets"])
     print(context["markets_json"])
+
+
 
 
     return render(request, 'home/home.html',context)
