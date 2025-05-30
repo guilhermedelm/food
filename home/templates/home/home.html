@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html>p
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -12,6 +12,12 @@
     <!-- Leaflet CSS + JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-star-rating/4.0.6/css/star-rating.min.css" rel="stylesheet">
+
+    <!-- JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-star-rating/4.0.6/js/star-rating.min.js"></script>
 
     
 
@@ -47,7 +53,26 @@
     
         {% if markets %}
             <div id="map" style="height: 500px; margin-top: 20px;"></div>
+
+            <div id="market-info" class="mt-4 card p-3 shadow-sm" style="display: none;">
+                <h5 id="info-name" class="mb-2"></h5>
+                <p><strong>Endereço:</strong> <span id="info-address"></span></p>
+                <p><strong>Distância:</strong> <span id="info-distance"></span> km</p>
+                <p><strong>Produtos:</strong> <span id="info-products"></span></p>
+                <p><strong>Pontuação:</strong> <span id="info-score"></span></p>
+            </div>
             
+
+            <form method="POST" class="card p-4 shadow-sm mt-4">
+                {% csrf_token %}
+                <input type="hidden" name="listing_name" value="{{ markets.0.0 }}"> <!-- Assume o primeiro mercado listado -->
+                <div class="mb-3">
+                    <label class="form-label">Sua nota para o local:</label>
+                    <input id="rating" name="user_rating" type="number" class="rating" min="0" max="5" step="0.5" data-size="md">
+                </div>
+                <button type="submit" class="btn btn-success">Enviar Nota</button>
+            </form>
+
 
             <h2 class="mt-5">Mercados próximos:</h2>
             <table class="table table-striped table-bordered mt-3">
@@ -57,6 +82,7 @@
                         <th>Endereço</th>
                         <th>Distância (km)</th>
                         <th>Produtos</th>
+                        <th>Nota</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -66,39 +92,46 @@
                         <td>{{ market.1 }}</td>
                         <td>{{ market.2|floatformat:2 }}</td>
                         <td>{{ market.3}}</td>
+                        <td>{{ market.6}}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             <script>
-                //coordenadas do usuário
                 const userLat = parseFloat('{{ latitude|default:"0" }}')
                 const userLng = parseFloat('{{ longitude|default:"0" }}')
-                
-                //passar markets para json
+
                 const markets = JSON.parse(`{{ markets_json|escapejs }}`);
-                
-                //inicializa mapa no usuário                
+
                 const map = L.map('map').setView([userLat, userLng], 13);
-                
-                // Adiciona o mapa base do OpenStreetMap
+
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '&copy; OpenStreetMap contributors'
                 }).addTo(map);
 
-                //Adiciona o marcador do local do usuário
-                L.marker([userLat,userLng]).addTo(map)
-                    .bindPopup('Sua Locacalização')
+                L.marker([userLat, userLng]).addTo(map)
+                    .bindPopup('Sua Localização')
                     .openPopup();
 
-                //Adiciona markets no mapa
-                for (const market of markets){
-                    const [name,address,distance,products,lat,lng] = market;
-                    L.marker([lat,lng]).addTo(map)
-                    .bindPopup(`<strong>${name}</strong><br>${address}<br><em>${products}</em><br>${distance.toFixed(2)} km`);
-                }
+                for (const market of markets) {
+                    const [name, address, distance, products, lat, lng, score] = market;
 
+                    const marker = L.marker([lat, lng]).addTo(map)
+                        .bindPopup(`<strong>${name}</strong><br>${address}<br><em>${products}</em><br>${distance.toFixed(2)} km`);
+
+                    marker.on('click', () => {
+                        document.getElementById("info-name").textContent = name;
+                        document.getElementById("info-address").textContent = address;
+                        document.getElementById("info-distance").textContent = distance.toFixed(2);
+                        document.getElementById("info-products").textContent = products;
+                        document.getElementById("info-score").textContent = score;
+
+                        document.getElementById("market-info").style.display = "block";
+                        document.getElementById("market-info").scrollIntoView({ behavior: "smooth" });
+                    });
+                }
             </script>
+
 
         {% endif %}
     </div>
